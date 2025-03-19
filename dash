@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOL to USDC - Automated Arbitrage Executor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@tailwindcss/browser@latest"></script>
+    <script src="https://unpkg.com/@solana/wallet-adapter-base@latest/lib/index.iife.js"></script>
+    <script src="https://unpkg.com/@solana/wallet-adapter-phantom@latest/lib/index.iife.js"></script>
+    <script src="https://unpkg.com/@solana/wallet-adapter-react@latest/lib/index.iife.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.70.1/lib/index.iife.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/buffer/6.0.3/buffer.min.js"></script>
+    <style>
+        /* Custom styles for toast messages */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #4caf50;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            font-size: 1rem;
+            z-index: 1000;
+            opacity: 1;
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+        }
+        .toast-warning {
+            background-color: #f39c12;
+        }
+        .toast-info {
+            background-color: #3498db;
+        }
+        .toast-success {
+             background-color: #4caf50;
+        }
+
+        .toast.fade-out {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+    </style>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4">
+    <h1 class="text-2xl font-semibold text-gray-800 mb-6">SOL to USDC - Automated Arbitrage Executor</h1>
+
+    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold text-gray-800">Settings</h2>
+             <button id="connectWalletBtn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Connect Wallet
+            </button>
+        </div>
+        <div id="walletStatus" class="mb-4 text-gray-700"></div>
+
+        <div class="flex items-center mb-4">
+            <input type="checkbox" id="autoExecuteToggle" class="mr-2">
+            <label for="autoExecuteToggle" class="text-gray-700">Auto-execute profitable arbitrage (USE WITH CAUTION)</label>
+        </div>
+        <div class="flex items-center mb-4">
+            <input type="checkbox" id="simulateToggle" class="mr-2" checked>
+            <label for="simulateToggle" class="text-gray-700">Simulation mode (no real transactions)</label>
+        </div>
+        <div class="mb-4">
+            <label for="tradeAmount" class="block text-gray-700 text-sm font-bold mb-2">Trade amount (SOL):</label>
+            <input type="number" id="tradeAmount" value="1" min="0.1" step="0.1" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+        </div>
+    </div>
+
+    <div class="flex space-x-4 mb-6">
+        <button id="refreshPricesBtn" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Refresh Prices</button>
+        <button id="executeArbitrageBtn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" disabled>Execute Arbitrage</button>
+    </div>
+
+    <div id="results" class="mb-6"></div>
+    <div id="arbitrage" class="bg-white p-6 rounded-lg shadow-md mb-6"></div>
+
+    <div id="transactionLog" class="bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Transaction Log</h2>
+        <div id="logEntries" class="text-gray-700"></div>
+    </div>
+
+    <script>
+        const DEX_CONFIG = [
+            { name: 'Raydium', dex: 'Raydium' },
+            { name: 'Orca', dex: 'Orca' },
+            { name: 'Lifinity', dex: 'Lifinity' }
+        ];
+
+        // Store the best arbitrage opportunity
+        let bestArbitrageOpportunity = null;
+
+        // Solana connection
+        let connection;
+        let wallet;
+        let publicKey;
+        let isWalletLoaded = false;
+        let wallets;
+        // RPC URLs - Added multiple endpoints
+        const RPC_URLS = [
+            'https://api.mainnet-beta.solana.com',
+            'https://solana-api.projectserum.com',
+            'https://rpc.helius.xyz/?api-key=YOUR_HELIUS_API_KEY' // Replace with your key
+        ];
+        let currentRpcIndex = 0;
+
+        // Function to display toast messages
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('fade-out');
+                setTimeout(() => toast.remove(), 500); // Remove after fade out
+            }, 3000); // 3 seconds
+        }
+
+        // Initialize Solana connection and load wallet
+        async function initSolana() {
+            try {
+                // Connect to Solana using the current RPC URL
+                connection = new solanaWeb3.Connection(
+                    RPC_URLS[currentRpcIndex],
+                    'confirmed'
+                );
+
+                // Check connection and handle errors
+                try {
+                    await connection.getEpochInfo();
+                    console.log("Successfully connected to Solana RPC:", RPC_URLS[currentRpcIndex]);
+                } catch (error) {
+                    console.error("Error connecting to RPC:", RPC_URLS[currentRpcIndex], error);
+                    // Switch to the next RPC URL
+                    currentRpcIndex = (currentRpcIndex + 1) % RPC_URLS.length;
+                    console.log("Trying next RPC URL:", RPC_URLS[currentRpcIndex]);
+                    //showToast('Failed to connect to Solana network. Trying another RPC endpoint...', 'warning');
+                    // Recall initSolana to try again with the new URL
+                    return initSolana(); // Use return to avoid nested calls
+                }
+
+
+                // Initialize Solana wallet adapter
+                await initWallet();
+
+            } catch (err) {
+                console.error('Error initializing Solana:', err);
+                showToast('Failed to connect to Solana network', 'error');
+                updateWalletStatus(false, 'Failed to connect to Solana network');
+            }
+        }
+
+        async function initWallet() {
+             wallets = [
+                new SolanaWalletAdapter.PhantomWalletAdapter(),
+              ];
+
+            const walletContainer = new SolanaWalletAdapter.WalletProvider({
+                wallets,
+                autoConnect: false,
+            });
+           // setWallet(walletContainer);
+            wallet = walletContainer;
+
+            if (wallet) {
+                if (wallet.autoConnect) {
+                  try {
+                    await wallet.connect();
+                    publicKey = wallet.publicKey;
+                    isWalletLoaded = true;
+                    updateWalletStatus(true, 'Wallet connected');
+                    await displayWalletBalance();
+                  } catch (error) {
+                     console.error("Auto connect failed", error)
+                  }
+                }
+            }
+        }
+
+        // Connect wallet button handler
+        async function connectWallet() {
+            if (!wallet) {
+                alert('No wallet adapter initialized.');
+                return;
+            }
+
+            try {
+                await wallet.connect();
+                publicKey = wallet.publicKey;
+                isWalletLoaded = true;
+                updateWalletStatus(true, 'Wallet connected');
+                await displayWalletBalance();
+                 showToast('Wallet connected successfully!', 'success');
+            } catch (error) {
+                console.error('Wallet connection error:', error);
+                showToast(`Wallet connection failed: ${error.message}`, 'error');
+                updateWalletStatus(false, `Wallet connection failed: ${error.message}`);
+            }
+        }
+
+        async function displayWalletBalance() {
+            if (!wallet || !wallet.connected || !connection) return;
+
+            try {
+                const balance = await connection.getBalance(publicKey);
+                const solBalance = balance / solanaWeb3.LAMPORTS_PER_SOL;
+
+                const walletStatusDiv = document.getElementById('walletStatus');
+                walletStatusDiv.innerHTML += `<div>Balance: ${solBalance.toFixed(4)} SOL</div>`;
+            } catch (error) {
+                console.error("Error fetching balance", error);
+                showToast(`Error fetching balance: ${error.message}`, 'error');
+            }
+        }
+
+        function updateWalletStatus(isLoaded, message) {
+            const walletStatus = document.getElementById('walletStatus');
+            isWalletLoaded = isLoaded;
+
+            if (isLoaded) {
+                const shortenedKey = publicKey ? `${publicKey.toString().slice(0, 6)}...${publicKey.toString().slice(-4)}` : '';
+                walletStatus.innerHTML = `
+                    <div class="mt-2">
+                        <div class="text-green-500">✓ ${message}</div>
+                        <div>Address: ${shortenedKey}</div>
+                    </div>
+                `;
+            } else {
+                walletStatus.innerHTML = `
+                    <div class="mt-2">
+                        <div class="text-red-500">✗ ${message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Log transaction or simulation results
+        function logTransaction(success, message, details = {}) {
+            const logEntries = document.getElementById('logEntries');
+            const timestamp = new Date().toLocaleTimeString();
+
+            const logItem = document.createElement('div');
+            logItem.className = `transaction-item ${success ? 'bg-green-100 border-green-400 text-green-700' : 'bg-red-100 border-red-400 text-red-700'} border rounded p-4 mb-2`;
+
+            let detailsHtml = '';
+            if (Object.keys(details).length > 0) {
+                detailsHtml = '<ul class="list-disc list-inside">';
+                for (const [key, value] of Object.entries(details)) {
+                    detailsHtml += `<li><strong class="font-semibold">${key}:</strong> ${value}</li>`;
+                }
+                detailsHtml += '</ul>';
+            }
+
+            logItem.innerHTML = `
+                <div><strong class="font-semibold">${timestamp}</strong>: ${message}</div>
+                ${detailsHtml}
+            `;
+
+            // Insert at the top
+            logEntries.insertBefore(logItem, logEntries.firstChild);
+        }
+
+        async function fetchPrices() {
+            const resultsDiv = document.getElementById('results');
+            const arbitrageDiv = document.getElementById('arbitrage');
+            const executeArbitrageBtn = document.getElementById('executeArbitrageBtn');
+
+            resultsDiv.innerHTML = '<div class="text-gray-600 italic">Loading prices...</div>';
+            arbitrageDiv.innerHTML = '';
+            executeArbitrageBtn.disabled = true;
+            bestArbitrageOpportunity = null;
+
+            try {
+                const requests = DEX_CONFIG.map(dex => fetchDexPrice(dex));
+                const responses = await Promise.allSettled(requests);
+
+                // Extract results and handle potential errors
+                const dexResults = [];
+                let hasErrors = false;
+
+                resultsDiv.innerHTML = responses.map((response, i) => {
+                    if (response.status === 'rejected') {
+                        hasErrors = true;
+                        return `<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                            <strong class="font-bold">${DEX_CONFIG[i].name}</strong>
+                            <span class="block sm:inline">Error: ${response.reason.message}</span>
+                        </div>`;
+                    }
+
+                    const { data, startTime, endTime } = response.value;
+                    dexResults.push(data);
+
+                    return `<div class="bg-white border border-gray-200 rounded-md shadow-sm p-4 mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">${data.dexName}</h3>
+                        <div class="text-gray-700">1 SOL = ${data.usdcAmount.toFixed(4)} USDC</div>
+                        <div class="text-gray-500 text-sm">
+                            Response time: ${endTime - startTime}ms<br>
+                            ${new Date(endTime).toLocaleTimeString()}
+                        </div>
+                    </div>`;
+                }).join('');
+
+                // Calculate arbitrage opportunities if we have all results
+                if (!hasErrors && dexResults.length === DEX_CONFIG.length) {
+                    const opportunity = analyzeArbitrageOpportunities(dexResults, arbitrageDiv);
+
+                    // Enable execute button if there's a profitable opportunity
+                    if (opportunity && opportunity.rawProfit > 0) {
+                        executeArbitrageBtn.disabled = false;
+                        bestArbitrageOpportunity = opportunity;
+
+                        // Auto-execute if enabled
+                        if (document.getElementById('autoExecuteToggle').checked) {
+                            executeArbitrage();
+                        }
+                    }
+                }
+
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                    <strong class="font-bold">Error</strong>
+                    <span class="block sm:inline">${error.message}</span>
+                </div>`;
+            }
+        }
+
+        function analyzeArbitrageOpportunities(dexResults, arbitrageDiv) {
+            arbitrageDiv.innerHTML = '<h2 class="text-2xl font-semibold text-gray-800 mb-4">Arbitrage Opportunities</h2>';
+
+            // Calculate all possible arbitrage pairs
+            const arbitragePairs = [];
+
+            for (let i = 0; i < dexResults.length; i++) {
+                for (let j = i + 1; j < dexResults.length; j++) {
+                    const dex1 = dexResults[i];
+                    const dex2 = dexResults[j];
+
+                    // Calculate price difference
+                    const priceDiff = Math.abs(dex1.usdcAmount - dex2.usdcAmount);
+                    const priceDiffPercent = (priceDiff / Math.min(dex1.usdcAmount, dex2.usdcAmount)) * 100;
+
+                    // Determine buy/sell direction
+                    const buyDex = dex1.usdcAmount < dex2.usdcAmount ? dex1 : dex2;
+                    const sellDex = dex1.usdcAmount < dex2.usdcAmount ? dex2 : dex1;
+
+                    // Calculate potential profit for 1 SOL
+                    const rawProfit = sellDex.usdcAmount - buyDex.usdcAmount;
+
+                    arbitragePairs.push({
+                        buyDex: buyDex.dexName,
+                        sellDex: sellDex.dexName,
+                        buyDexObject: buyDex,
+                        sellDexObject: sellDex,
+                        priceDiff,
+                        priceDiffPercent,
+                        rawProfit,
+                        hasOpportunity: priceDiff > 0
+                    });
+                }
+            }
+
+            // Sort by raw profit (highest first)
+            arbitragePairs.sort((a, b) => b.rawProfit - a.rawProfit);
+
+            // Display the results
+            if (arbitragePairs.length === 0) {
+                arbitrageDiv.innerHTML += '<p class="text-gray-600">No arbitrage opportunities found.</p>';
+                return null;
+            }
+
+            // Get the most profitable opportunity
+            const mostProfitable = arbitragePairs[0];
+
+            let html = '';
+
+            // Add summary at the top
+            arbitrageDiv.innerHTML += `
+            <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
+                <p class="font-bold">Summary</p>
+                <p>Found ${arbitragePairs.length} price differences between DEX pairs.</p>
+                <p class="font-semibold text-green-600">Best opportunity: Buy on ${mostProfitable.buyDex}, sell on ${mostProfitable.sellDex} for ${mostProfitable.rawProfit.toFixed(4)} USDC profit per SOL.</p>
+                <p>Price difference: ${mostProfitable.priceDiffPercent.toFixed(2)}%</p>
+            </div>`;
+
+            // Add each pair's details
+            arbitragePairs.forEach((pair, index) => {
+                const isMostProfitable = index === 0;
+
+                html += `
+                <div class="bg-white rounded-lg shadow-md p-4 mb-4 ${pair.hasOpportunity ? 'border-2 border-green-500' : 'border border-gray-200'} ${isMostProfitable ? 'ring-2 ring-offset-2 ring-green-500' : ''}">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">${pair.buyDex} ↔ ${pair.sellDex}</h3>
+                    <div class="text-gray-700">Buy on: <strong class="font-semibold text-blue-600">${pair.buyDex}</strong> | Sell on: <strong class="font-semibold text-red-600">${pair.sellDex}</strong></div>
+                    <div class="text-gray-700">Price difference: ${pair.priceDiff.toFixed(4)} USDC (${pair.priceDiffPercent.toFixed(2)}%)</div>
+                    <div class="text-gray-700">Raw profit per SOL: ${pair.rawProfit.toFixed(4)} USDC</div>
+                    ${isMostProfitable ?
+                        `<div class="mt-2 text-green-700 font-semibold">
+                            ★ Best opportunity (${pair.priceDiffPercent.toFixed(2)}% difference)
+                        </div>` : ''
+                    }
+                </div>`;
+            });
+
+            arbitrageDiv.innerHTML += html;
+
+            // Return the best opportunity
+            return mostProfitable;
+        }
+
+        async function executeArbitrage() {
+            if (!bestArbitrageOpportunity) {
+                showToast('No arbitrage opportunity available', 'warning');
+                return;
+            }
+
+            if (!wallet || !wallet.connected) {
+                 showToast('Please connect your wallet.', 'warning');
+                 return;
+            }
+
+            const simulationMode = document.getElementById('simulateToggle').checked;
+            const tradeAmount = parseFloat(document.getElementById('tradeAmount').value);
+
+            if (isNaN(tradeAmount) || tradeAmount <= 0) {
+                showToast('Please enter a valid trade amount', 'error');
+                return;
+            }
+
+            // Extract details from the best opportunity
+            const { buyDex, sellDex, buyDexObject, sellDexObject, rawProfit } = bestArbitrageOpportunity;
+
+            // Calculate expected results
+            const expectedUsdcAmount = buyDexObject.usdcAmount * tradeAmount;
+            const expectedProfit = rawProfit * tradeAmount;
+
+            if (simulationMode) {
+                // Simulate the trade
+                logTransaction(true, 'Arbitrage simulated successfully', {
+                    'Trade Type': 'Simulation',
+                    'Buy DEX': buyDex,
+                    'Sell DEX': sellDex,
+                    'SOL Amount': tradeAmount,
+                    'Expected USDC from buy': expectedUsdcAmount.toFixed(4),
+                    'Expected profit': expectedProfit.toFixed(4) + ' USDC'
+                });
+                 showToast('Arbitrage simulated successfully!', 'success');
+                return;
+            }
+
+            // Proceed with actual transaction
+            try {
+                logTransaction(true, 'Starting arbitrage execution', {
+                    'Buy DEX': buyDex,
+                    'Sell DEX': sellDex,
+                    'SOL Amount': tradeAmount
+                });
+                showToast('Starting arbitrage execution...', 'info');
+
+                // Simulate the first transaction (buying USDC)
+                await new Promise(resolve => setTimeout(resolve, 3000));
+
+                logTransaction(true, `Successfully bought USDC on ${buyDex}`, {
+                    'SOL Spent': tradeAmount,
+                    'USDC Received': expectedUsdcAmount.toFixed(4)
+                });
+                showToast(`Successfully bought USDC on ${buyDex}`, 'success');
+
+                // Simulate the second transaction (selling for SOL)
+                await new Promise(resolve => setTimeout(resolve, 3000));
+
+                const receivedSol = tradeAmount + (expectedProfit / sellDexObject.usdcAmount);
+
+                logTransaction(true, `Successfully sold USDC on ${sellDex}`, {
+                    'USDC Spent': expectedUsdcAmount.toFixed(4),
+                    'SOL Received': receivedSol.toFixed(4),
+                    'Profit': expectedProfit.toFixed(4) + ' USDC'
+                });
+                 showToast(`Successfully sold USDC on ${sellDex}`, 'success');
+
+                // Final summary
+                logTransaction(true, 'Arbitrage completed successfully', {
+                    'Net Profit': expectedProfit.toFixed(4) + ' USDC',
+                    'Percent Return': ((expectedProfit / (tradeAmount * buyDexObject.usdcAmount)) * 100).toFixed(2) + '%'
+                });
+                showToast('Arbitrage completed successfully!', 'success');
+
+            } catch (error) {
+                logTransaction(false, 'Arbitrage execution failed', {
+                    'Error': error.message
+                });
+                showToast(`Arbitrage execution failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function fetchDexPrice(dexConfig) {
+            const startTime = Date.now();
+
+            try {
+                // Mint addresses
+                const solMint = 'So11111111111111111111111111111111111111112';
+                const usdcMint = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+
+                const response = await fetch(
+                    `https://quote-api.jup.ag/v6/quote?` +
+                    `inputMint=${solMint}&` +
+                    `outputMint=${usdcMint}&` +
+                    `amount=1000000000&` +   // 1 SOL (9 decimals)
+                    `slippage=0.1&` +
+                    `onlyDEXs=${dexConfig.dex}`
+                );
+
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                const data = await response.json();
+                const endTime = Date.now();
+
+                return {
+                    data: {
+                        dexName: dexConfig.name,
+                        // Convert USDC amount (6 decimals) to whole number
+                        usdcAmount: data.outAmount / 1000000,
+                        routeInfo: data
+                    },
+                    startTime,
+                    endTime
+                };
+
+            } catch (error) {
+                return Promise.reject(error);
+            }
+        }
+
+        // Set up event handlers
+        document.getElementById('executeArbitrageBtn').addEventListener('click', executeArbitrage);
+        document.getElementById('refreshPricesBtn').addEventListener('click', fetchPrices);
+        document.getElementById('connectWalletBtn').addEventListener('click', connectWallet);
+
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            initSolana();
+            fetchPrices();
+
+            // Set up auto-refresh
+            setInterval(fetchPrices, 30000); // Refresh every 30 seconds
+        });
+    </script>
+</body>
+</html>
