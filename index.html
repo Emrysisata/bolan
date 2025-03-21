@@ -32,6 +32,30 @@
             border: none; /* Remove the border */
             display: block;  /* Ensure no extra space below the iframe */
         }
+        .try-bolan-bolan-button {
+            background-image: linear-gradient(to right, #6ee7b7, #3b82f6); /* Tailwind's from-teal-300 to-blue-500 */
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 1.5rem; /* Tailwind's rounded-full */
+            font-weight: 600;  /* Tailwind's font-semibold */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Slightly stronger shadow */
+            transition: all 0.3s ease;
+            display: inline-flex; /* Use inline-flex for better alignment */
+            align-items: center;
+            justify-content: center; /* Center the text and icon horizontally */
+            gap: 0.75rem; /* Tailwind's gap-2 */
+            text-decoration: none; /* remove underline */
+        }
+
+        .try-bolan-bolan-button:hover {
+            background-image: linear-gradient(to right, #14b8a6, #2563eb); /* Tailwind's hover:from-teal-500 hover:to-blue-700 */
+            transform: translateY(-4px) scale(1.05); /* Increased scale and translate */
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3); /* Increased shadow on hover */
+        }
+
+        .try-bolan-bolan-button i {
+            font-size: 1.25rem; /* Tailwind's text-xl */
+        }
 
     </style>
 </head>
@@ -46,8 +70,8 @@
             <h1 class="text-3xl font-semibold mb-2">Bolan Bolan</h1>
             <p class="text-lg opacity-80">Hustle for Money, Smartly.</p>
              <nav class="mt-4">
-                <a href="#about-section" class="text-white hover:text-gray-200 transition-colors duration-300">About</a>
-            </nav>
+                    <a href="#about-section" class="text-white hover:text-gray-200 transition-colors duration-300">About</a>
+                </nav>
         </div>
     </header>
 
@@ -70,11 +94,17 @@
                 <a href="#" class="download-button bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300 shadow-md">
                     <i class="mr-2"></i> Linux (RPM)
                 </a>
-                 <a href="#" class="download-button bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300 shadow-md">
+                <a href="#" class="download-button bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300 shadow-md">
                     <i class="mr-2"></i> Android
                 </a>
                 <a href="#" class="download-button bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300 shadow-md">
                     <i class="mr-2"></i> iOS
+                </a>
+            </div>
+            <div class="mt-8">
+                 <a href="#" class="try-bolan-bolan-button">
+                    <i class="fas fa-rocket"></i> {/* Font Awesome Rocket Icon */}
+                    Try Bolan Bolan
                 </a>
             </div>
         </section>
