@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jupiter Swap Interface</title>
     <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@latest/lib/index.iife.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bs58/5.0.0/bs58.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/base58/5.0.0/base58.min.js"></script>
     <script src="https://esm.sh/@jup-ag/core@3.5.2"></script>
     <style>
         body {
@@ -100,6 +100,7 @@
                     publicKey: keypair.publicKey,
                     signTransaction: async (tx) => {
                         tx.sign(keypair);
+                        console.log(tx);
                         return tx;
                     }
                 };
