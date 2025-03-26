@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jupiter Swap Interface</title>
+    <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bs58/5.0.0/bs58.min.js"></script>
+    <script src="https://esm.sh/@jup-ag/core@3.5.2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+
+        .container {
+            background-color: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #333;
+            border: 1px solid #444;
+            color: white;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #9945ff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #7a3ab9;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .success {
+            background-color: #4CAF50;
+        }
+
+        .error {
+            background-color: #f44336;
+        }
+
+        .info {
+            background-color: #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>SOL to USDC Swap</h2>
+        <textarea id="privateKey" rows="3" placeholder="Enter private key (base58 or JSON array)"></textarea>
+        <button onclick="swap()">Swap SOL to USDC</button>
+        <div id="status" class="status"></div>
+    </div>
+
+    <script>
+        async function swap() {
+            const privateKeyInput = document.getElementById('privateKey').value.trim();
+            const statusDiv = document.getElementById('status');
+            
+            try {
+                // Validate input
+                if (!privateKeyInput) throw new Error('Please enter a private key');
+                
+                // Parse private key
+                let privateKey;
+                if (privateKeyInput.startsWith('[')) {
+                    privateKey = new Uint8Array(JSON.parse(privateKeyInput));
+                } else {
+                    privateKey = bs58.decode(privateKeyInput);
+                }
+
+                // Initialize wallet
+                const keypair = solanaWeb3.Keypair.fromSecretKey(privateKey);
+                const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'));
+                const wallet = {
+                    publicKey: keypair.publicKey,
+                    signTransaction: async (tx) => {
+                        tx.sign(keypair);
+                        return tx;
+                    }
+                };
+
+                // Initialize Jupiter
+                statusDiv.className = 'status info';
+                statusDiv.style.display = 'block';
+                statusDiv.textContent = 'Initializing Jupiter...';
+                
+                const jupiter = await Jupiter.init({
+                    connection,
+                    wallet,
+                    cluster: 'mainnet-beta',
+                });
+
+                // Set up swap parameters
+                const inputMint = 'So11111111111111111111111111111111111111112'; // SOL
+                const outputMint = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'; // USDC
+                const inputAmount = 0.1 * 1e9; // 0.1 SOL in lamports
+                const slippage = 1; // 1%
+
+                // Get route
+                statusDiv.textContent = 'Finding best route...';
+                const routes = await jupiter.computeRoutes({
+                    inputMint,
+                    outputMint,
+                    inputAmount,
+                    slippage,
+                    forceFetch: true,
+                });
+
+                if (!routes || routes.routesInfos.length === 0) {
+                    throw new Error('No routes found');
+                }
+
+                // Execute swap
+                statusDiv.textContent = 'Executing swap...';
+                const { execute } = await jupiter.exchange({
+                    routeInfo: routes.routesInfos[0],
+                });
+
+                const swapResult = await execute();
+                
+                // Show success
+                statusDiv.className = 'status success';
+                statusDiv.textContent = `Swap successful! Tx ID: ${swapResult.txid}`;
+                
+            } catch (error) {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `Error: ${error.message}`;
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>
