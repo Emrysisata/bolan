@@ -36,6 +36,35 @@
             padding: 1rem;
             margin-bottom: 1rem;
         }
+        .public-key-display {
+            background-color: #f3f4f6;
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            font-family: monospace;
+            word-break: break-all;
+            position: relative;
+        }
+        .copy-button {
+            position: absolute;
+            right: 0.5rem;
+            top: 0.5rem;
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .copy-button:hover {
+            background-color: #2563eb;
+        }
+        .copied-message {
+            color: #059669;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            display: none;
+        }
         body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
@@ -44,7 +73,7 @@
 
     <div class="bg-white p-6 rounded-lg shadow-md mb-6">
         <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-semibold text-gray-800">Keypair Management</h2>
+            <h2 class="text-xl font-semibold text-gray-800">App Managed Account</h2>
             <button id="generateNewKeypair" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
                 Generate New Keypair
             </button>
@@ -146,12 +175,12 @@
                 localKeypair = solanaWeb3.Keypair.fromSecretKey(
                     new Uint8Array(parsedKeypair)
                 );
-                showToast('Keypair loaded', 'success');
+                showToast('Account loaded from local storage', 'success');
             } else {
                 localKeypair = solanaWeb3.Keypair.generate();
                 localStorage.setItem(LOCAL_STORAGE_KEY, 
                     JSON.stringify(Array.from(localKeypair.secretKey)));
-                showToast('New keypair created', 'success');
+                showToast('New account created', 'success');
             }
             updateKeypairStatus();
         }
@@ -163,14 +192,32 @@
 
             keypairStatus.innerHTML = `
                 <div class="keypair-info">
-                    <div class="text-green-500">✓ Using application keypair</div>
-                    <div>Address: ${shortenedKey}</div>
+                    <div class="text-green-500">✓ Using locally stored account</div>
+                    <div class="mt-2">
+                        <div class="text-sm font-semibold mb-1">Public Key:</div>
+                        <div class="public-key-display">
+                            ${publicKey}
+                            <button class="copy-button" onclick="copyPublicKey()">Copy</button>
+                            <div class="copied-message" id="copiedMessage">Copied to clipboard!</div>
+                        </div>
+                    </div>
                     <button onclick="showPrivateKeyWarning()" 
                             class="text-blue-500 hover:text-blue-700 text-sm mt-2">
                         Show Private Key
                     </button>
                 </div>
             `;
+        }
+
+        function copyPublicKey() {
+            const publicKey = localKeypair.publicKey.toString();
+            navigator.clipboard.writeText(publicKey).then(() => {
+                const copiedMessage = document.getElementById('copiedMessage');
+                copiedMessage.style.display = 'block';
+                setTimeout(() => {
+                    copiedMessage.style.display = 'none';
+                }, 2000);
+            });
         }
 
         async function displayWalletBalance() {
@@ -387,13 +434,13 @@
         document.getElementById('refreshPricesBtn').addEventListener('click', fetchPrices);
         document.getElementById('executeArbitrageBtn').addEventListener('click', executeArbitrage);
         document.getElementById('generateNewKeypair').addEventListener('click', async () => {
-            if (confirm('Generate new keypair? Existing one will be lost!')) {
+            if (confirm('Generate new account? Existing one will be lost!')) {
                 localKeypair = solanaWeb3.Keypair.generate();
                 localStorage.setItem(LOCAL_STORAGE_KEY, 
                     JSON.stringify(Array.from(localKeypair.secretKey)));
                 await displayWalletBalance();
                 updateKeypairStatus();
-                showToast('New keypair generated', 'success');
+                showToast('New account created', 'success');
             }
         });
 
