@@ -2,8 +2,9 @@
 <html>
 <head>
     <title>SOL to USDC Swap</title>
-    <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bs58@4.0.1/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/+esm"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bs58@4.0.1/+esm"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.2/dist/axios.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; padding: 20px; }
         .input-group { margin-bottom: 15px; }
@@ -22,38 +23,38 @@
         <label>USDC Amount:</label>
         <input type="text" id="usdcAmount" value="1" placeholder="USDC amount">
     </div>
-    <button onclick="executeSwap()">Swap SOL to USDC</button>
+    <button id="swapButton">Swap SOL to USDC</button>
     <div id="logs"></div>
 
 <script type="module">
-import { Connection, Keypair, VersionedTransaction } from 'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.84.0/+esm';
+import { Connection, Keypair, VersionedTransaction } from 'https://cdn.jsdelivr.net/npm/@solana/web3.js@1.84.0/+esm'
 
-const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
-const RAYDIUM_API = 'https://transaction-v1.raydium.io';
+const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
+const RAYDIUM_API = 'https://transaction-v1.raydium.io'
 
 async function executeSwap() {
-    const logs = document.getElementById('logs');
-    const log = (message) => logs.textContent += message + '\n';
+    const logs = document.getElementById('logs')
+    const log = (message) => logs.textContent += message + '\n'
     
     try {
-        const privateKey = document.getElementById('privateKey').value;
-        const usdcAmount = parseFloat(document.getElementById('usdcAmount').value) * 1e6; // USDC has 6 decimals
+        const privateKey = document.getElementById('privateKey').value
+        const usdcAmount = parseFloat(document.getElementById('usdcAmount').value) * 1e6
 
         // Initialize connection and wallet
-        const connection = new Connection('https://api.mainnet-beta.solana.com');
-        const owner = Keypair.fromSecretKey(bs58.decode(privateKey));
+        const connection = new Connection('https://api.mainnet-beta.solana.com')
+        const owner = Keypair.fromSecretKey(bs58.decode(privateKey))
         
-        log('Fetching swap quote...');
+        log('Fetching swap quote...')
         const quoteUrl = `${RAYDIUM_API}/compute/swap-base-out?` + 
             `inputMint=So11111111111111111111111111111111111111112&` +
             `outputMint=${USDC_MINT}&` +
             `amount=${usdcAmount}&` +
             `slippageBps=100&` + // 1% slippage
-            `txVersion=0`;
+            `txVersion=0`
         
-        const { data: swapResponse } = await axios.get(quoteUrl);
+        const { data: swapResponse } = await axios.get(quoteUrl)
         
-        log('Creating transaction...');
+        log('Creating transaction...')
         const { data: txData } = await axios.post(`${RAYDIUM_API}/transaction/swap-base-out`, {
             computeUnitPriceMicroLamports: String(swapResponse.data.default.h),
             swapResponse,
@@ -61,27 +62,27 @@ async function executeSwap() {
             wallet: owner.publicKey.toBase58(),
             wrapSol: false,
             unwrapSol: false
-        });
+        })
 
         // Deserialize and send transaction
-        const txBuffer = Buffer.from(txData.data[0].transaction, 'base64');
-        const transaction = VersionedTransaction.deserialize(txBuffer);
-        transaction.sign([owner]);
+        const txBuffer = Buffer.from(txData.data[0].transaction, 'base64')
+        const transaction = VersionedTransaction.deserialize(txBuffer)
+        transaction.sign([owner])
         
-        log('Sending transaction...');
-        const txid = await connection.sendTransaction(transaction);
-        log(`Transaction sent: ${txid}`);
+        log('Sending transaction...')
+        const txid = await connection.sendTransaction(transaction)
+        log(`Transaction sent: ${txid}`)
         
-        const confirmation = await connection.confirmTransaction(txid);
-        if (confirmation.value.err) throw new Error('Transaction failed');
-        log('Swap successful!');
+        const confirmation = await connection.confirmTransaction(txid)
+        if (confirmation.value.err) throw new Error('Transaction failed')
+        log('Swap successful!')
         
     } catch (error) {
-        log(`Error: ${error.message}`);
+        log(`Error: ${error.message}`)
     }
 }
 
-window.executeSwap = executeSwap;
+document.getElementById('swapButton').addEventListener('click', executeSwap)
 </script>
 </body>
 </html>
