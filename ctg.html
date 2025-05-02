@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Solana Arbitrage Bot</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body, html {
+            width: 100%;
+            margin: auto;
+            overflow-y: auto;
+            overflow-x: hidden;
+            text-align: center;
+            height: 100%;
+            font-family: sans-serif;
+            font-size: 16px;
+        }
+        input, button {
+            cursor: pointer;
+        }
+        div {
+            width: inherit;
+        }
+        #topDiv {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60px;
+            background-color: #f0f0f0;
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+        #topDiv > h1, #topDiv > button {
+            margin: 0;
+            height: 30px;
+            font-size: 1.2em;
+        }
+        #topDiv > h1 {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+        #topDiv > input {
+            width: 65%;
+            min-width: auto;
+            height: 30px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 0.9em;
+        }
+        #topDiv > button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 8px 12px;
+            font-size: 0.9em;
+        }
+        #topDiv > button:hover {
+            background-color: #0056b3;
+        }
+        #bottomScreen {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: auto;
+            overflow-y: auto;
+            position: absolute;
+            top: 60px;
+            bottom: 0;
+        }
+        #leftParametersScreen {
+            width: 100%;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+        #enteredAccountInfo {
+            padding: 10px;
+            font-weight: bolder;
+            border-bottom: 1px solid #ccc;
+            justify-content: space-around;
+            display: flex;
+            left: 0;
+            position: sticky;
+            top: 0;
+            background-color: white;
+            z-index: 10;
+            right: 0;
+            width: 100%;
+            box-sizing: border-box;
+            font-size: 0.85em;
+        }
+        #enteredAccountInfo > i {
+            font-style: normal;
+            margin: 0 5px;
+        }
+        #bottomScreen > input {
+            width: 20px;
+            background-color: pink;
+            height: 20px;
+        }
+        #rightLogScreen {
+            width: 100%;
+            border-left: none;
+            border-top: 1px solid bisque;
+            bottom: 0;
+            padding: 15px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            text-align: left;
+            font-size: 0.8em;
+        }
+        #rightLogScreenTopDiv {
+            display: flex;
+            flex-direction:row;
+            border-bottom: 1px solid #ccc;
+            width: 100%;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+        #rightLogScreenTopDiv > i {
+            border: none;
+            font-weight: bold;
+            margin-right: 5px;
+            font-style: normal;
+            font-size: 1em;
+        }
+        #appTradingParametersDiv {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-around;
+            margin-bottom: 15px;
+            height: auto;
+        }
+        #appTradingParametersDiv > div {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            width: 80%;
+            justify-content: space-between;
+        }
+        .parameterEditValTools > input {
+            width: 60px;
+            margin-left: 5px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            box-sizing: border-box;
+            text-align: center;
+            font-size: 0.9em;
+        }
+        #dexesLocation {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-around;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        #dexesLocation > div {
+            border: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            width: 45%;
+            border-radius: 10px;
+            height: 100px;
+            font-weight: bold;
+            text-align: center;
+            padding: 8px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+            font-size: 0.8em;
+        }
+        #dexesLocation > div > img {
+            max-width: 40px;
+            max-height: 40px;
+            margin: 5px auto;
+        }
+        #dexesLocation > div > i {
+            font-style: normal;
+            margin: 2px 0;
+            font-size: 0.9em;
+        }
+        #buySellInformationHolderDiv {
+            width: auto;
+            margin: 10px;
+            border: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            border-radius: 10px;
+            text-align: left;
+            padding: 10px;
+            height: auto;
+            justify-content: space-around;
+            box-sizing: border-box;
+            font-size: 0.9em;
+        }
+        #buySellInformationHolderDiv > div {
+            padding: 6px 0;
+            border-bottom: 1px dashed #eee;
+        }
+        #buySellInformationHolderDiv > div:last-child {
+            border-bottom: none;
+        }
+        #tradeSimulationResultHolderDiv1,
+        #tradeSimulationResultHolderDiv2,
+        #tradeSimulationResultHolderDiv3 {
+            font-style: normal;
+        }
+        #tradeSimulationResultHolderDiv2 {
+            padding-top: 10px;
+            padding-bottom: 10px;
+            border-top: 1px dashed #eee;
+            border-bottom: 1px dashed #eee;
+        }
+        #appTradingParametersDiv {
+            text-align: center;
+            padding: 10px 0;
+            border-top: 1px solid #ccc;
+            margin-top: 15px;
+        }
+        #tradeStartStop {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            font-size: 1em;
+            position: relative;
+            background-color: #28a745;
+            border: none;
+            color: white;
+            bottom: 15px;
+            font-weight: bold;
+        }
+        #tradeStartStop.stop {
+            background-color: #dc3545;
+        }
+        #logMessages {
+            margin-top: 8px;
+            font-size: 0.75em;
+            white-space: pre-wrap;
+        }
+
+        @media (min-width: 768px) {
+            body {
+                font-size: 18px;
+            }
+            #topDiv {
+                height: 80px;
+                padding: 0 20px;
+            }
+            #topDiv > h1, #topDiv > button {
+                height: 40px;
+                font-size: 1.5em;
+            }
+            #topDiv > h1 {
+                width: 60px;
+                height: 60px;
+            }
+            #topDiv > input {
+                width: 60%;
+                height: 40px;
+                font-size: 1em;
+            }
+            #topDiv > button {
+                padding: 10px 15px;
+                font-size: 1em;
+            }
+            #bottomScreen {
+                flex-direction: row;
+                top: 80px;
+            }
+            #leftParametersScreen {
+                width: 70%;
+                padding: 20px;
+            }
+            #rightLogScreen {
+                width: 30%;
+                border-left: 1px solid bisque;
+                border-top: none;
+                padding: 20px;
+                font-size: 0.9em;
+            }
+            #appTradingParametersDiv {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-around;
+                margin-bottom: 20px;
+                height: 40px;
+            }
+            #appTradingParametersDiv > div {
+                flex-direction: row;
+                width: auto;
+                margin-bottom: 0;
+                justify-content: flex-start;
+                margin-right: 20px;
+            }
+            .parameterEditValTools > input {
+                width: 50px;
+                font-size: 1em;
+            }
+            #dexesLocation {
+                flex-wrap: nowrap;
+            }
+            #dexesLocation > div {
+                width: 20%;
+                height: 120px;
+                margin-bottom: 20px;
+                font-size: 0.9em;
+            }
+            #dexesLocation > div > img {
+                max-width: 50px;
+                max-height: 50px;
+            }
+            #buySellInformationHolderDiv {
+                padding: 15px;
+                font-size: 1em;
+            }
+            #buySellInformationHolderDiv > div {
+                padding: 8px 0;
+            }
+            #appTradingParametersDiv {
+                padding: 15px 0;
+                margin-top: 20px;
+            }
+            #tradeStartStop {
+                width: 80px;
+                height: 80px;
+                font-size: 1.2em;
+                bottom: 20px;
+            }
+            #logMessages {
+                font-size: 0.9em;
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="topDiv">
+        <h1>BB</h1>
+        <input type="text" id="privateKeyInputBox" placeholder="Enter your private key">
+        <button onclick="analyzeDataPlacedInPrivateKeyEntryBox()">Load</button>
+    </div>
+
+    <div id="bottomScreen">
+        <div id="leftParametersScreen">
+            <div id="enteredAccountInfo">
+                <i>SOL: N/A</i>
+                <i>PUB:xxxxxxxxxxxxxxxxxx</i>
+                <i>USDC: N/A</i>
+            </div>
+
+            <div id="appTradingParametersDiv">
+                <div>
+                    <input type="checkbox" id="autoTradeCheckboxInput" name="autoTradeCheckboxInput" value="autoTrade">
+                    <label for="autoTradeCheckboxInput">Auto Trade</label>
+                </div>
+                <div>
+                    <label for="maxLossVal">Max Loss:</label>
+                    <input type="number" id="maxLossVal" name="maxLossVal" placeholder="0">
+                </div>
+                <div>
+                    <label for="minGainVal">Min Gains:</label>
+                    <input type="number" id="minGainVal" name="minGainVal" placeholder="0">
+                </div>
+            </div>
+
+            <div id="dexesLocation">
+                <div id="dex1">
+                    <img id="dex1img" src="dex1_logo.png" alt="Dex 1">
+                    <i id="dex1name">Dex1</i>
+                    <i id="dex1sol">SOL: 0.0000</i>
+                    <i id="dex1usdc">USDC: 0.0000</i>
+                </div>
+                <div id="dex2">
+                    <img id="dex2img" src="dex2_logo.png" alt="Dex 2">
+                    <i id="dex2name">Dex2</i>
+                    <i id="dex2sol">SOL: 0.0000</i>
+                    <i id="dex2usdc">USDC: 0.0000</i>
+                </div>
+                <div id="dex3">
+                    <img id="dex3img" src="dex3_logo.png" alt="Dex 3">
+                    <i id="dex3name">Dex3</i>
+                    <i id="dex3sol">SOL: 0.0000</i>
+                    <i id="dex3usdc">USDC: 0.0000</i>
+                </div>
+            </div>
+
+            <div id="buySellInformationHolderDiv">
+                <div id="tradeSimulationResultHolderDiv1"><i>Buy: N/A</i></div>
+                <div id="tradeSimulationResultHolderDiv2"><i>Sell: N/A</i></div>
+                <div id="tradeSimulationResultHolderDiv3"><i>Potential Profit: N/A</i></div>
+            </div>
+
+            <button id="tradeStartStop">Start</button>
+        </div>
+        <div id="rightLogScreen">
+            <div id="rightLogScreenTopDiv">
+                <i>Log:</i>
+                <i id="currentDateRunning"></i>
+                <i id="currentTimeRunning"></i>
+            </div>
+            <div id="logMessages">
+                </div>
+        </div>
+    </div>
+    <script>
+        // Solana API and RPC setup
+        const solanaWeb3 = require('@solana/web3.js');
+        const clusterApiUrl = solanaWeb3.clusterApiUrl;
+        const connection = new solanaWeb3.Connection(clusterApiUrl('mainnet-beta'), 'confirmed');
+
+        // Constants
+        const SOL_DECIMALS = 9;
+        const USDC_DECIMALS = 6;
+        const DEX_NAMES = ["Dex1", "Dex2", "Dex3"]; // Consistent DEX names
+        const DEFAULT_PUBLIC_KEY = 'xxxxxxxxxxxxxxxxxx';
+
+        let walletPrivateKey;
+        let walletPublicKey;
+        let solBalance = 0;
+        let usdcBalance = 0;
+        let tradingInterval;
+        let isTradingActive = false;
+
+        // Get HTML elements
+        let currentDateOfOperationElement = document.getElementById("currentDateRunning");
+        let currentTimeOfOperationElement = document.getElementById("currentTimeRunning");
+        let logMessagesElement = document.getElementById("logMessages");
+        let tradeStartStopButton = document.getElementById("tradeStartStop");
+        let autoTradeCheckbox;
+        let maxLossInput;
+        let minGainInput;
+        let dex1SolElement, dex1UsdcElement, dex2SolElement, dex2UsdcElement, dex3SolElement, dex3UsdcElement; // Consistent element names
+        let buyInfoDiv, sellInfoDiv, profitInfoDiv;
+        let pubKeyDisplay;
+
+        // Mock DEX data (replace with actual data fetching)
+        let dexData = {
+            Dex1: { sol: 100, usdc: 10000, usdcToSolPrice: 100, name: "Dex1" },
+            Dex2: { sol: 150, usdc: 12000, usdcToSolPrice: 98, name: "Dex2" },
+            Dex3: { sol: 200, usdc: 15000, usdcToSolPrice: 102, name: "Dex3" },
+        };
+
+        window.onload = () => {
+            initializeElements();
+            initializeEventListeners();
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+        };
+
+        function initializeElements() {
+            autoTradeCheckbox = document.getElementById("autoTradeCheckboxInput");
+            maxLossInput = document.getElementById("maxLossVal");
+            minGainInput = document.getElementById("minGainVal");
+            dex1SolElement = document.getElementById("dex1sol");
+            dex1UsdcElement = document.getElementById("dex1usdc");
+            dex2SolElement = document.getElementById("dex2sol");
+            dex2UsdcElement = document.getElementById("dex2usdc");
+            dex3SolElement = document.getElementById("dex3sol");
+            dex3UsdcElement = document.getElementById("dex3usdc");
+            buyInfoDiv = document.getElementById("tradeSimulationResultHolderDiv1");
+            sellInfoDiv = document.getElementById("tradeSimulationResultHolderDiv2");
+            profitInfoDiv = document.getElementById("tradeSimulationResultHolderDiv3");
+            pubKeyDisplay = document.querySelector("#enteredAccountInfo i:nth-child(2)");
+        }
+
+        function initializeEventListeners() {
+            tradeStartStopButton.addEventListener("click", toggleTradeStatus);
+        }
+
+        function updateDateTime() {
+            const now = new Date();
+            const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+            const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
+            currentDateOfOperationElement.textContent = now.toLocaleDateString(undefined, dateOptions);
+            currentTimeOfOperationElement.textContent = now.toLocaleTimeString(undefined, timeOptions);
+        }
+
+        function logMessage(message) {
+            const now = new Date();
+            const time = now.toLocaleTimeString();
+            logMessagesElement.textContent += `[${time}] ${message}\n`;
+            logMessagesElement.scrollTop = logMessagesElement.scrollHeight;
+        }
+
+        async function analyzeDataPlacedInPrivateKeyEntryBox() {
+            const entryBoxData = document.getElementById("privateKeyInputBox").value;
+            try {
+                const decoded = bs58.decode(entryBoxData);
+                if (decoded.length === 64) {
+                    walletPrivateKey = entryBoxData;
+                    const keypair = solanaWeb3.Keypair.fromSecretKey(decoded);
+                    walletPublicKey = keypair.publicKey;
+                    logMessage(`Private key loaded. Public Key: ${walletPublicKey.toBase58()}`);
+                    pubKeyDisplay.textContent = `PUB:${walletPublicKey.toBase58().substring(0, 10)}...`;
+                    await fetchWalletBalances(); // Fetch balances after key is loaded
+                } else {
+                    logMessage("Invalid private key format. Please enter a valid Base58 encoded private key.");
+                    walletPrivateKey = null;
+                    walletPublicKey = null;
+                    pubKeyDisplay.textContent = `PUB:${DEFAULT_PUBLIC_KEY}`;
+                }
+            } catch (error) {
+                logMessage("Invalid private key.  Please enter a valid Base58 encoded private key.");
+                walletPrivateKey = null;
+                walletPublicKey = null;
+                pubKeyDisplay.textContent = `PUB:${DEFAULT_PUBLIC_KEY}`;
+            }
+        }
+
+        async function fetchWalletBalances() {
+            if (!walletPublicKey) {
+                logMessage("Wallet public key not loaded. Please load the private key first.");
+                return;
+            }
+
+            try {
+                solBalance = await connection.getBalance(walletPublicKey);
+                logMessage(`SOL Balance: ${solBalance / solanaWeb3.LAMPORTS_PER_SOL} SOL`);
+
+                // Mock USDC balance (replace with actual token balance fetch)
+                usdcBalance = Math.random() * 10000; // Mock value
+                logMessage(`USDC Balance: ${usdcBalance.toFixed(2)} USDC`);
+
+                updateAccountInfoDisplay();
+            } catch (error) {
+                logMessage(`Error fetching balances: ${error.message}`);
+            }
+        }
+
+        function updateAccountInfoDisplay() {
+            document.querySelector("#enteredAccountInfo i:nth-child(1)").textContent = `SOL: ${(solBalance / solanaWeb3.LAMPORTS_PER_SOL).toFixed(4)}`;
+            document.querySelector("#enteredAccountInfo i:nth-child(3)").textContent = `USDC: ${usdcBalance.toFixed(2)}`;
+        }
+
+        async function dex1PriceDataRead() {
+            logMessage("Fetching price data for Dex1...");
+            await new Promise(resolve => setTimeout(resolve, 500));
+            // Simulate price fluctuation
+            dexData.Dex1.usdcToSolPrice = Math.random() * 100 + 50;
+            return { dexName: "Dex1", usdcToSolPrice: dexData.Dex1.usdcToSolPrice, TimeOfPriceRead: new Date() };
+        }
+
+        async function dex2PriceDataRead() {
+            logMessage("Fetching price data for Dex2...");
+            await new Promise(resolve => setTimeout(resolve, 500));
+             // Simulate price fluctuation
+            dexData.Dex2.usdcToSolPrice = Math.random() * 100 + 50 + Math.random() * 10 - 5;
+            return { dexName: "Dex2", usdcToSolPrice: dexData.Dex2.usdcToSolPrice, TimeOfPriceRead: new Date() };
+        }
+
+        async function dex3PriceDataRead() {
+            logMessage("Fetching price data for Dex3...");
+            await new Promise(resolve => setTimeout(resolve, 500));
+            // Simulate price fluctuation
+            dexData.Dex3.usdcToSolPrice = Math.random() * 100 + 50 + Math.random() * 6 - 3;
+            return { dexName: "Dex3", usdcToSolPrice: dexData.Dex3.usdcToSolPrice, TimeOfPriceRead: new Date() };
+        }
+
+        /**
+         * Simulates the process of finding the most profitable arbitrage opportunity
+         * among the available DEXs.
+         *
+         * @returns {Promise<{ buyDex: {name: string, usdcToSolPrice: number},
+         * sellDex: {name: string, usdcToSolPrice: number},
+         * profit: number } | null>}
+         * A promise that resolves to an object containing the buy DEX, sell DEX,
+         * and potential profit, or null if no profitable trade is found.
+         */
+        async function simulateHighestProfitScenario() {
+            logMessage("Simulating highest profit scenario...");
+
+            // Fetch price data from all DEXs concurrently
+            const [dex1Data, dex2Data, dex3Data] = await Promise.all([
+                dex1PriceDataRead(),
+                dex2PriceDataRead(),
+                dex3PriceDataRead(),
+            ]);
+
+            // Array of DEX data for easier manipulation
+            const dexArray = [dex1Data, dex2Data, dex3Data];
+
+            let bestBuyDex = null;
+            let bestSellDex = null;
+            let potentialProfit = 0;
+
+            // Find the DEX with the lowest price (best for buying)
+            bestBuyDex = dexArray.reduce((minDex, currentDex) =>
+                currentDex.usdcToSolPrice < minDex.usdcToSolPrice ? currentDex : minDex, dexArray[0]
+            );
+
+            // Find the DEX with the highest price (best for selling), excluding the bestBuyDex
+            bestSellDex = dexArray.reduce((maxDex, currentDex) => {
+                if (currentDex.dexName !== bestBuyDex.dexName && currentDex.usdcToSolPrice > maxDex.usdcToSolPrice) {
+                    return currentDex;
+                }
+                return maxDex;
+            }, dexArray.find(dex => dex.dexName !== bestBuyDex.dexName) || dexArray[0]); //handles edge case
+
+            // Calculate potential profit
+            potentialProfit = bestSellDex.usdcToSolPrice - bestBuyDex.usdcToSolPrice;
+
+            // Get user-defined constraints
+            const maxLoss = parseFloat(maxLossInput.value) || 0;
+            const minGain = parseFloat(minGainInput.value) || 0;
+
+            // Check if the potential profit meets the criteria
+            if (potentialProfit > minGain && potentialProfit < maxLoss) {
+                logMessage(
+                    `Potential profit found: ${potentialProfit.toFixed(2)} SOL. Buying from ${bestBuyDex.dexName}, selling on ${bestSellDex.dexName}`
+                );
+                return {
+                    buyDex: bestBuyDex,
+                    sellDex: bestSellDex,
+                    profit: potentialProfit,
+                };
+            } else {
+                logMessage(
+                    `No profitable trade found within constraints. Profit: ${potentialProfit.toFixed(2)}, Max Loss: ${maxLoss}, Min Gain: ${minGain}`
+                );
+                return null;
+            }
+      
