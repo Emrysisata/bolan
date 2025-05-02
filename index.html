@@ -1,188 +1,722 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
+    <title>Solana Arbitrage Bot</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bolan Bolan</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/@tailwindcss/browser@latest"></script>
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        .download-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        .feature-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
-        }
-        #app-container {
-            /*height: 500px; !* Adjust as needed *!*/
+        body, html {
             width: 100%;
-            margin-top: 20px;
-            border-radius: 10px;
-            overflow: hidden; /* Clip the rounded corners of the iframe */
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-        #app-iframe {
-            width: 100%;
+            margin: auto;
+            overflow-y: auto;
+            overflow-x: hidden;
+            text-align: center;
             height: 100%;
-            border: none; /* Remove the border */
-            display: block;  /* Ensure no extra space below the iframe */
+            font-family: sans-serif;
+            font-size: 16px;
         }
-        .try-bolan-bolan-button {
-            background-image: linear-gradient(to right, #6ee7b7, #3b82f6); /* Tailwind's from-teal-300 to-blue-500 */
-            color: white;
-            padding: 1rem 2rem;
-            border-radius: 1.5rem; /* Tailwind's rounded-full */
-            font-weight: 600;  /* Tailwind's font-semibold */
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Slightly stronger shadow */
-            transition: all 0.3s ease;
-            display: inline-flex; /* Use inline-flex for better alignment */
+        input, button {
+            cursor: pointer;
+        }
+        div {
+            width: inherit;
+        }
+        #topDiv {
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center; /* Center the text and icon horizontally */
-            gap: 0.75rem; /* Tailwind's gap-2 */
-            text-decoration: none; /* remove underline */
+            height: 60px;
+            background-color: #f0f0f0;
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+        #topDiv > h1, #topDiv > button {
+            margin: 0;
+            height: 30px;
+            font-size: 1.2em;
+        }
+        #topDiv > h1 {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+        #topDiv > input {
+            width: 65%;
+            min-width: auto;
+            height: 30px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 0.9em;
+        }
+        #topDiv > button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 8px 12px;
+            font-size: 0.9em;
+        }
+        #topDiv > button:hover {
+            background-color: #0056b3;
+        }
+        #bottomScreen {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: auto;
+            overflow-y: auto;
+            position: absolute;
+            top: 60px;
+            bottom: 0;
+        }
+        #leftParametersScreen {
+            width: 100%;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+        #enteredAccountInfo {
+            padding: 10px;
+            font-weight: bolder;
+            border-bottom: 1px solid #ccc;
+            justify-content: space-around;
+            display: flex;
+            left: 0;
+            position: sticky;
+            top: 0;
+            background-color: white;
+            z-index: 10;
+            right: 0;
+            width: 100%;
+            box-sizing: border-box;
+            font-size: 0.85em;
+        }
+        #enteredAccountInfo > i {
+            font-style: normal;
+            margin: 0 5px;
+        }
+        #bottomScreen > input {
+            width: 20px;
+            background-color: pink;
+            height: 20px;
+        }
+        #rightLogScreen {
+            width: 100%;
+            border-left: none;
+            border-top: 1px solid bisque;
+            bottom: 0;
+            padding: 15px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            text-align: left;
+            font-size: 0.8em;
+        }
+        #rightLogScreenTopDiv {
+            display: flex;
+            flex-direction:row;
+            border-bottom: 1px solid #ccc;
+            width: 100%;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+        #rightLogScreenTopDiv > i {
+            border: none;
+            font-weight: bold;
+            margin-right: 5px;
+            font-style: normal;
+            font-size: 1em;
+        }
+        #appTradingParametersDiv {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-around;
+            margin-bottom: 15px;
+            height: auto;
+        }
+        #appTradingParametersDiv > div {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            width: 80%;
+            justify-content: space-between;
+        }
+        .parameterEditValTools > input {
+            width: 60px;
+            margin-left: 5px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            box-sizing: border-box;
+            text-align: center;
+            font-size: 0.9em;
+        }
+        #dexesLocation {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-around;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        #dexesLocation > div {
+            border: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            width: 45%;
+            border-radius: 10px;
+            height: 100px;
+            font-weight: bold;
+            text-align: center;
+            padding: 8px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+            font-size: 0.8em;
+        }
+        #dexesLocation > div > img {
+            max-width: 40px;
+            max-height: 40px;
+            margin: 5px auto;
+        }
+        #dexesLocation > div > i {
+            font-style: normal;
+            margin: 2px 0;
+            font-size: 0.9em;
+        }
+        #buySellInformationHolderDiv {
+            width: auto;
+            margin: 10px;
+            border: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            border-radius: 10px;
+            text-align: left;
+            padding: 10px;
+            height: auto;
+            justify-content: space-around;
+            box-sizing: border-box;
+            font-size: 0.9em;
+        }
+        #buySellInformationHolderDiv > div {
+            padding: 6px 0;
+            border-bottom: 1px dashed #eee;
+        }
+        #buySellInformationHolderDiv > div:last-child {
+            border-bottom: none;
+        }
+        #tradeSimulationResultHolderDiv1,
+        #tradeSimulationResultHolderDiv2,
+        #tradeSimulationResultHolderDiv3 {
+            font-style: normal;
+        }
+        #tradeSimulationResultHolderDiv2 {
+            padding-top: 10px;
+            padding-bottom: 10px;
+            border-top: 1px dashed #eee;
+            border-bottom: 1px dashed #eee;
+        }
+        #appTradingParametersDiv {
+            text-align: center;
+            padding: 10px 0;
+            border-top: 1px solid #ccc;
+            margin-top: 15px;
+        }
+        #tradeStartStop {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            font-size: 1em;
+            position: relative;
+            background-color: #28a745;
+            border: none;
+            color: white;
+            bottom: 15px;
+            font-weight: bold;
+        }
+        #tradeStartStop.stop {
+            background-color: #dc3545;
+        }
+        #logMessages {
+            margin-top: 8px;
+            font-size: 0.75em;
+            white-space: pre-wrap;
         }
 
-        .try-bolan-bolan-button:hover {
-            background-image: linear-gradient(to right, #14b8a6, #2563eb); /* Tailwind's hover:from-teal-500 hover:to-blue-700 */
-            transform: translateY(-4px) scale(1.05); /* Increased scale and translate */
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3); /* Increased shadow on hover */
+        @media (min-width: 768px) {
+            body {
+                font-size: 18px;
+            }
+            #topDiv {
+                height: 80px;
+                padding: 0 20px;
+            }
+            #topDiv > h1, #topDiv > button {
+                height: 40px;
+                font-size: 1.5em;
+            }
+            #topDiv > h1 {
+                width: 60px;
+                height: 60px;
+            }
+            #topDiv > input {
+                width: 60%;
+                height: 40px;
+                font-size: 1em;
+            }
+            #topDiv > button {
+                padding: 10px 15px;
+                font-size: 1em;
+            }
+            #bottomScreen {
+                flex-direction: row;
+                top: 80px;
+            }
+            #leftParametersScreen {
+                width: 70%;
+                padding: 20px;
+            }
+            #rightLogScreen {
+                width: 30%;
+                border-left: 1px solid bisque;
+                border-top: none;
+                padding: 20px;
+                font-size: 0.9em;
+            }
+            #appTradingParametersDiv {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-around;
+                margin-bottom: 20px;
+                height: 40px;
+            }
+            #appTradingParametersDiv > div {
+                flex-direction: row;
+                width: auto;
+                margin-bottom: 0;
+                justify-content: flex-start;
+                margin-right: 20px;
+            }
+            .parameterEditValTools > input {
+                width: 50px;
+                font-size: 1em;
+            }
+            #dexesLocation {
+                flex-wrap: nowrap;
+            }
+            #dexesLocation > div {
+                width: 20%;
+                height: 120px;
+                margin-bottom: 20px;
+                font-size: 0.9em;
+            }
+            #dexesLocation > div > img {
+                max-width: 50px;
+                max-height: 50px;
+                margin: 5px auto;
+            }
+            #buySellInformationHolderDiv {
+                padding: 15px;
+                font-size: 1em;
+            }
+            #buySellInformationHolderDiv > div {
+                padding: 8px 0;
+            }
+            #appTradingParametersDiv {
+                padding: 15px 0;
+                margin-top: 20px;
+            }
+            #tradeStartStop {
+                width: 80px;
+                height: 80px;
+                font-size: 1.2em;
+                bottom: 20px;
+            }
+            #logMessages {
+                font-size: 0.9em;
+                margin-top: 10px;
+            }
         }
-
-        .try-bolan-bolan-button i {
-            font-size: 1.25rem; /* Tailwind's text-xl */
-        }
-
     </style>
 </head>
-<body class="bg-gradient-to-br from-gray-100 to-gray-50 text-gray-800 antialiased">
-    <header class="bg-gradient-to-r from-green-500 to-teal-500 text-white py-6 px-4 rounded-b-lg shadow-md">
-        <div class="container mx-auto text-center">
-            <div class="flex justify-center mb-4">
-                <div class="w-20 h-20 rounded-full bg-white flex items-center justify-center">
-                    <span class="text-2xl font-bold text-green-600">BB</span>
+<body>
+    <div id="topDiv">
+        <h1>BB</h1>
+        <input type="text" id="privateKeyInputBox" placeholder="Enter your private key">
+        <button onclick="analyzeDataPlacedInPrivateKeyEntryBox()">Load</button>
+    </div>
+
+    <div id="bottomScreen">
+        <div id="leftParametersScreen">
+            <div id="enteredAccountInfo">
+                <i>SOL: N/A</i>
+                <i>PUB:xxxxxxxxxxxxxxxxxx</i>
+                <i>USDC: N/A</i>
+            </div>
+
+            <div id="appTradingParametersDiv">
+                <div>
+                    <input type="checkbox" id="autoTradeCheckboxInput" name="autoTradeCheckboxInput" value="autoTrade">
+                    <label for="autoTradeCheckboxInput">Auto Trade</label>
+                </div>
+                <div>
+                    <label for="maxLossVal">Max Loss:</label>
+                    <input type="number" id="maxLossVal" name="maxLossVal" placeholder="0">
+                </div>
+                <div>
+                    <label for="minGainVal">Min Gains:</label>
+                    <input type="number" id="minGainVal" name="minGainVal" placeholder="0">
                 </div>
             </div>
-            <h1 class="text-3xl font-semibold mb-2">Bolan Bolan</h1>
-            <p class="text-lg opacity-80">Hustle for Money, Smartly.</p>
-             <nav class="mt-4">
-                    <a href="#about-section" class="text-white hover:text-gray-200 transition-colors duration-300">About</a>
-                </nav>
+
+            <div id="dexesLocation">
+                <div id="dex1">
+                    <img id="dex1img" src="dex1_logo.png" alt="Dex 1">
+                    <i id="dex1name">Dex1</i>
+                    <i id="dex1sol">SOL: 0.0000</i>
+                    <i id="dex1usdc">USDC: 0.0000</i>
+                </div>
+                <div id="dex2">
+                    <img id="dex2img" src="dex2_logo.png" alt="Dex 2">
+                    <i id="dex2name">Dex2</i>
+                    <i id="dex2sol">SOL: 0.0000</i>
+                    <i id="dex2usdc">USDC: 0.0000</i>
+                </div>
+                <div id="dex3">
+                    <img id="dex3img" src="dex3_logo.png" alt="Dex 3">
+                    <i id="dex3name">Dex3</i>
+                    <i id="dex3sol">SOL: 0.0000</i>
+                    <i id="dex3usdc">USDC: 0.0000</i>
+                </div>
+            </div>
+
+            <div id="buySellInformationHolderDiv">
+                <div id="tradeSimulationResultHolderDiv1"><i>Buy: N/A</i></div>
+                <div id="tradeSimulationResultHolderDiv2"><i>Sell: N/A</i></div>
+                <div id="tradeSimulationResultHolderDiv3"><i>Potential Profit: N/A</i></div>
+            </div>
+
+            <button id="tradeStartStop">Start</button>
         </div>
-    </header>
-
-    <main class="container mx-auto py-10">
-        <section class="download-section text-center">
-            <h2 class="text-2xl font-semibold text-gray-700 mb-8">Download for Your Device</h2>
-            <div class="download-buttons flex flex-wrap justify-center gap-4">
-                <a href="download.html" class="download-button bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300 shadow-md">
-                    <i class="mr-2"></i> Windows (64-bit)
-                </a>
-                <a href="download.html" class="download-button bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300 shadow-md">
-                    <i class="mr-2"></i> macOS (Intel)
-                </a>
-                <a href="download.html" class="download-button bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300 shadow-md">
-                    <i class="mr-2"></i> macOS (Apple Silicon)
-                </a>
-                <a href="download.html" class="download-button bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300 shadow-md">
-                    <i class="mr-2"></i> Linux (Debian)
-                </a>
-                <a href="download.html" class="download-button bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300 shadow-md">
-                    <i class="mr-2"></i> Linux (RPM)
-                </a>
-                <a href="download.html" class="download-button bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300 shadow-md">
-                    <i class="mr-2"></i> Android
-                </a>
-                <a href="download.html" class="download-button bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300 shadow-md">
-                    <i class="mr-2"></i> iOS
-                </a>
+        <div id="rightLogScreen">
+            <div id="rightLogScreenTopDiv">
+                <i>Log:</i>
+                <i id="currentDateRunning"></i>
+                <i id="currentTimeRunning"></i>
             </div>
-            <div class="mt-8">
-                 <a href="dash.html" class="try-bolan-bolan-button">
-                    <i class="fa fa-rocket"></i>
-                    Try Bolan Bolan
-                </a>
-            </div>
-        </section>
-
-        <section class="features-section py-12">
-            <div class="text-center mb-10">
-                <h2 class="text-2xl font-semibold text-gray-700 mb-4">Key Features</h2>
-                <p class="text-gray-600 max-w-xl mx-auto">
-                    Explore the powerful features that make Bolan Bolan stand out.
-                </p>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <div class="feature-card bg-white rounded-lg shadow-md p-6 transition-all duration-300 hover:shadow-lg">
-                    <h3 class="text-xl font-semibold text-green-600 mb-4">Solana Arbitrage</h3>
-                    <p class="text-gray-700">Maximize profits with Solana arbitrage trading.</p>
+            <div id="logMessages">
                 </div>
-                <div class="feature-card bg-white rounded-lg shadow-md p-6 transition-all duration-300 hover:shadow-lg">
-                    <h3 class="text-xl font-semibold text-green-600 mb-4">Real-time Analysis</h3>
-                    <p class="text-gray-700">Get up-to-the-minute market analysis and insights.</p>
-                </div>
-                <div class="feature-card bg-white rounded-lg shadow-md p-6 transition-all duration-300 hover:shadow-lg">
-                    <h3 class="text-xl font-semibold text-green-600 mb-4">Customizable Strategies</h3>
-                    <p class="text-gray-700">Tailor the bot to your specific trading preferences.</p>
-                </div>
-                <div class="feature-card bg-white rounded-lg shadow-md p-6 transition-all duration-300 hover:shadow-lg">
-                    <h3 class="text-xl font-semibold text-green-600 mb-4">Backtesting</h3>
-                    <p class="text-gray-700">Test your strategies with historical data before going live.</p>
-                </div>
-                <div class="feature-card bg-white rounded-lg shadow-md p-6 transition-all duration-300 hover:shadow-lg">
-                    <h3 class="text-xl font-semibold text-green-600 mb-4">Risk Management</h3>
-                    <p class="text-gray-700">Utilize advanced risk management tools to protect your investments.</p>
-                </div>
-                <div class="feature-card bg-white rounded-lg shadow-md p-6 transition-all duration-300 hover:shadow-lg">
-                    <h3 class="text-xl font-semibold text-green-600 mb-4">24/7 Support</h3>
-                    <p class="text-gray-700">Get help whenever you need it with our dedicated support team.</p>
-                </div>
-            </div>
-        </section>
-
-        <section id="app-section" class="app-section py-12">
-            <div class="text-center mb-10">
-                <h2 class="text-2xl font-semibold text-gray-700 mb-4">Trading App</h2>
-                <p class="text-gray-600 max-w-xl mx-auto">
-                    Access the Bolan Bolan trading application here.
-                </p>
-            </div>
-            <div id="app-container" class="mx-auto">
-                <iframe id="app-iframe" src="your-app-url.html"></iframe>
-            </div>
-        </section>
-
-        <section id="about-section" class="about-section py-12 bg-gray-50 rounded-t-lg shadow-md">
-            <div class="container mx-auto text-center">
-                <h2 class="text-2xl font-semibold text-gray-700 mb-4">About Bolan Bolan</h2>
-                <p class="text-gray-600 max-w-2xl mx-auto">
-                    Bolan Bolan is your tool to help you hustle for money, smartly, in the Solana trading world. We currently specialize in Solana arbitrage trading, providing you with the technology and strategies to potentially grow your investments.  We are continuously working to integrate more trading techniques in the future, expanding your opportunities to maximize your returns.
-                </p>
-            </div>
-        </section>
-    </main>
-
-    <footer class="bg-gray-800 text-white py-4 text-center rounded-t-lg shadow-md">
-        <div class="container mx-auto">
-            <p>&copy; 2024 Your Company. All rights reserved.</p>
         </div>
-    </footer>
-
+    </div>
     <script>
-        // Optional: You can add JavaScript for interactive elements here
-        // For example, to add smooth scrolling to internal links:
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                document.querySelector(this.getAttribute('href')).scrollIntoView({
-                    behavior: 'smooth'
-                });
-            });
-        });
+        let currentDateOfOperationElement = document.getElementById("currentDateRunning");
+        let currentTimeOfOperationElement = document.getElementById("currentTimeRunning");
+        let logMessagesElement = document.getElementById("logMessages");
+        let tradeStartStopButton = document.getElementById("tradeStartStop");
+        let isTradingActive = false;
+        let autoTradeCheckbox;
+        let maxLossInput;
+        let minGainInput;
+        let dex1SolElement, dex1UsdcElement, dex2SolElement, dex2UsdcElement, dex3SolElement, dex3UsdcElement;
+        let buyInfoDiv, sellInfoDiv, profitInfoDiv;
+
+        window.onload = () => {
+            initializeElements();
+            initializeEventListeners();
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+        };
+
+        function initializeElements() {
+            autoTradeCheckbox = document.getElementById("autoTradeCheckboxInput");
+            maxLossInput = document.getElementById("maxLossVal");
+            minGainInput = document.getElementById("minGainVal");
+            dex1SolElement = document.getElementById("dex1sol");
+            dex1UsdcElement = document.getElementById("dex1usdc");
+            dex2SolElement = document.getElementById("dex2sol");
+            dex2UsdcElement = document.getElementById("dex2usdc");
+            dex3SolElement = document.getElementById("dex3sol");
+            dex3UsdcElement = document.getElementById("dex3usdc");
+            buyInfoDiv = document.getElementById("tradeSimulationResultHolderDiv1");
+            sellInfoDiv = document.getElementById("tradeSimulationResultHolderDiv2");
+            profitInfoDiv = document.getElementById("tradeSimulationResultHolderDiv3");
+        }
+
+        function initializeEventListeners() {
+            tradeStartStopButton.addEventListener("click", toggleTradeStatus);
+        }
+
+        function updateDateTime() {
+            const now = new Date();
+            const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+            const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
+            currentDateOfOperationElement.textContent = now.toLocaleDateString(undefined, dateOptions);
+            currentTimeOfOperationElement.textContent = now.toLocaleTimeString(undefined, timeOptions);
+        }
+
+        function logMessage(message) {
+            const now = new Date();
+            const time = now.toLocaleTimeString();
+            logMessagesElement.textContent += `[${time}] ${message}\n`;
+            logMessagesElement.scrollTop = logMessagesElement.scrollHeight;
+        }
+
+        function analyzeDataPlacedInPrivateKeyEntryBox() {
+            const entryBoxData = document.getElementById("privateKeyInputBox").value;
+            logMessage(`Attempting to load private key: ${entryBoxData}`);
+        }
+
+        async function dex1PriceDataRead() {
+            logMessage("Fetching price data for Dex1...");
+            await new Promise(resolve => setTimeout(resolve, 500));
+            return { dexName: "Dex1", usdcToSolPrice: Math.random() * 100 + 10, TimeOfPriceRead: new Date() };
+        }
+
+        async function dex2PriceDataRead() {
+            logMessage("Fetching price data for Dex2...");
+            await new Promise(resolve => setTimeout(resolve, 500));
+            return { dexName: "Dex2", usdcToSolPrice: Math.random() * 100 + 10 + Math.random() * 5 - 2.5, TimeOfPriceRead: new Date() };
+        }
+
+        async function dex3PriceDataRead() {
+            logMessage("Fetching price data for Dex3...");
+            await new Promise(resolve => setTimeout(resolve, 500));
+            return { dexName: "Dex3", usdcToSolPrice: Math.random() * 100 + 10 + Math.random() * 3 - 1.5, TimeOfPriceRead: new Date() };
+        }
+
+        async function simulateHighestProfitScenario() {
+            logMessage("Simulating highest profit scenario...");
+            const dex1Data = await dex1PriceDataRead();
+            const dex2Data = await dex2PriceDataRead();
+            const dex3Data = await dex3PriceDataRead();
+
+            let bestBuyDex = dex1Data;
+            let bestSellDex = dex2Data;
+            let potentialProfit = bestSellDex.usdcToSolPrice - bestBuyDex.usdcToSolPrice;
+
+            if (dex2Data.usdcToSolPrice < bestBuyDex.usdcToSolPrice) {
+                bestBuyDex = dex2Data;
+                bestSellDex = dex1Data;
+                potentialProfit = bestSellDex.usdcToSolPrice - bestBuyDex.usdcToSolPrice;
+            }
+            if (dex3Data.usdcToSolPrice < bestBuyDex.usdcToSolPrice) {
+                bestBuyDex = dex3Data;
+                bestSellDex = dex1Data;
+                potentialProfit = bestSellDex.usdcToSolPrice - bestBuyDex.usdcToSolPrice;
+            }
+            if (dex1Data.usdcToSolPrice > dex2Data.usdcToSolPrice && dex1Data.usdcToSolPrice > dex3Data.usdcToSolPrice)
+            {
+                if(dex2Data.usdcToSolPrice > dex3Data.usdcToSolPrice){
+                    bestBuyDex = dex3Data;
+                    bestSellDex = dex1Data;
+                    potentialProfit = bestSellDex.usdcToSolPrice - bestBuyDex.usdcToSolPrice;
+                }
+                else{
+                    bestBuyDex = dex2Data;
+                    bestSellDex = dex1Data;
+                    potentialProfit = bestSellDex.usdcToSolPrice - bestBuyDex.usdcToSolPrice;
+                }
+            }
+            else if (dex2Data.usdcToSolPrice > dex1Data.usdcToSolPrice && dex2Data.usdcToSolPrice > dex3Data.usdcToSolPrice)
+            {
+                 if(dex1Data.usdcToSolPrice > dex3Data.usdcToSolPrice){
+                    bestBuyDex = dex3Data;
+                    bestSellDex = dex2Data;
+                    potentialProfit = bestSellDex.usdcToSolPrice - bestBuyDex.usdcToSolPrice;
+                }
+                else{
+                    bestBuyDex = dex1Data;
+                    bestSellDex = dex2Data;
+                    potentialProfit = bestSellDex.usdcToSolPrice - bestBuyDex.usdcToSolPrice;
+                }
+            }
+            else{
+                 if(dex1Data.usdcToSolPrice > dex2Data.usdcToSolPrice){
+                    bestBuyDex = dex2Data;
+                    bestSellDex = dex3Data;
+                    potentialProfit = bestSellDex.usdcToSolPrice - bestBuyDex.usdcToSolPrice;
+                }
+                else{
+                     bestBuyDex = dex1Data;
+                    bestSellDex = dex3Data;
+                    potentialProfit = bestSellDex.usdcToSolPrice - bestBuyDex.usdcToSolPrice;
+                }
+            }
+            
+            let maxLoss = parseFloat(maxLossInput.value) || 0;
+            let minGain = parseFloat(minGainInput.value) || 0;
+
+            if (potentialProfit > minGain && potentialProfit < maxLoss) {
+                logMessage(`Potential profit found: ${potentialProfit.toFixed(2)}. Buying from ${bestBuyDex.dexName}, selling on ${bestSellDex.dexName}`);
+                return {
+                    buyDex: bestBuyDex,
+                    sellDex: bestSellDex,
+                    profit: potentialProfit,
+                };
+            } else {
+                logMessage(`No profitable trade found within constraints. Profit: ${potentialProfit.toFixed(2)}, Max Loss: ${maxLoss}, Min Gain: ${minGain}`);
+                return null;
+            }
+        }
+
+        async function getGasFeeForTnx1() {
+            logMessage("Estimating gas fee for buy transaction...");
+            await new Promise(resolve => setTimeout(resolve, 200));
+            return 0.001;
+        }
+
+        async function getGasFeeForTnx2() {
+            logMessage("Estimating gas fee for sell transaction...");
+             await new Promise(resolve => setTimeout(resolve, 200));
+            return 0.0015;
+        }
+
+        async function simulateNetProfitafterBothTransactions(trade) {
+            if (!trade) return 0;
+            const gasFee1 = await getGasFeeForTnx1();
+            const gasFee2 = await getGasFeeForTnx2();
+            const netProfit = trade.profit - gasFee1 - gasFee2;
+            logMessage(`Estimated net profit: ${netProfit.toFixed(2)} SOL`);
+            return netProfit;
+        }
+
+        async function doTnx1(trade) {
+            logMessage(`Executing buy transaction on ${trade.buyDex.dexName}...`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            const success = Math.random() > 0.1;
+            if (success) {
+                logMessage(`Buy transaction on ${trade.buyDex.dexName} successful.`);
+                return true;
+            } else {
+                logMessage(`Buy transaction on ${trade.buyDex.dexName} failed.`);
+                return false;
+            }
+        }
+
+        async function doTnx2(trade) {
+            logMessage(`Executing sell transaction on ${trade.sellDex.dexName}...`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            const success = Math.random() > 0.1;
+            if (success) {
+                logMessage(`Sell transaction on ${trade.sellDex.dexName} successful.`);
+                return true;
+            } else {
+                logMessage(`Sell transaction on ${trade.sellDex.dexName} failed.`);
+                return false;
+            }
+        }
+
+        async function doNextTnxSet() {
+            logMessage("Attempting next best trade...");
+            const nextTrade = await simulateHighestProfitScenario();
+            if (nextTrade) {
+                const netProfit = await simulateNetProfitafterBothTransactions(nextTrade);
+                if (netProfit > 0) {
+                    const tnx1Success = await doTnx1(nextTrade);
+                    const tnx2Success = await doTnx2(nextTrade);
+                    if (tnx1Success && tnx2Success) {
+                        logMessage("Next trade set executed successfully.");
+                    } else {
+                        logMessage("Next trade set failed.");
+                    }
+                }
+            }
+            else{
+                logMessage("No more profitable trades available.");
+            }
+        }
+
+        async function send50percentOfProfitsGeneratedDuringCurrentTradingSession() {
+            logMessage("Sending 50% of profits...");
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            logMessage("Profit transfer complete.");
+        }
+
+        async functionperformTrade() {
+            const trade = await simulateHighestProfitScenario();
+            if (trade) {
+                updateDexInfo(trade);
+                updateTradeInfo(trade);
+                const netProfit = await simulateNetProfitafterBothTransactions(trade);
+                if (netProfit > 0) {
+                    const tnx1Success = await doTnx1(trade);
+                    const tnx2Success = await doTnx2(trade);
+                    if (!tnx1Success || !tnx2Success) {
+                        await doNextTnxSet();
+                    }
+                }
+            }
+        }
+
+        function toggleTradeStatus() {
+            if (isTradingActive) {
+                isTradingActive = false;
+                tradeStartStopButton.textContent = "Start";
+                tradeStartStopButton.classList.remove('stop');
+                logMessage("Trading stopped.");
+                if (autoTradeCheckbox.checked)
+                    send50percentOfProfitsGeneratedDuringCurrentTradingSession();
+                clearInterval(tradingInterval);
+            } else {
+                isTradingActive = true;
+                tradeStartStopButton.textContent = "Stop";
+                tradeStartStopButton.classList.add('stop');
+                logMessage("Trading started.");
+                if (autoTradeCheckbox.checked) {
+                    tradingInterval = setInterval(performTrade, 5000);
+                }
+                else{
+                    performTrade();
+                }
+            }
+        }
+
+        function updateDexInfo(trade)
+        {
+            if(trade.buyDex.dexName == "Dex1")
+            {
+                dex1SolElement.textContent = `SOL: ${Math.random().toFixed(4)}`;
+                dex1UsdcElement.textContent = `USDC: ${Math.random().toFixed(4)}`;
+            }
+            else if (trade.buyDex.dexName == "Dex2")
+            {
+                dex2SolElement.textContent = `SOL: ${Math.random().toFixed(4)}`;
+                dex2UsdcElement.textContent = `USDC: ${Math.random().toFixed(4)}`;
+            }
+             else if (trade.buyDex.dexName == "Dex3")
+            {
+                dex3SolElement.textContent = `SOL: ${Math.random().toFixed(4)}`;
+                dex3UsdcElement.textContent = `USDC: ${Math.random().toFixed(4)}`;
+            }
+
+            if(trade.sellDex.dexName == "Dex1")
+            {
+                dex1SolElement.textContent = `SOL: ${Math.random().toFixed(4)}`;
+                dex1UsdcElement.textContent = `USDC: ${Math.random().toFixed(4)}`;
+            }
+            else if (trade.sellDex.dexName == "Dex2")
+            {
+                dex2SolElement.textContent = `SOL: ${Math.random().toFixed(4)}`;
+                dex2UsdcElement.textContent = `USDC: ${Math.random().toFixed(4)}`;
+            }
+             else if (trade.sellDex.dexName == "Dex3")
+            {
+                dex3SolElement.textContent = `SOL: ${Math.random().toFixed(4)}`;
+                dex3UsdcElement.textContent = `USDC: ${Math.random().toFixed(4)}`;
+            }
+        }
+
+        function updateTradeInfo(trade) {
+            buyInfoDiv.textContent = `Buy from ${trade.buyDex.dexName} at ${trade.buyDex.usdcToSolPrice.toFixed(2)}`;
+            sellInfoDiv.textContent = `Sell on ${trade.sellDex.dexName} at ${trade.sellDex.usdcToSolPrice.toFixed(2)}`;
+            profitInfoDiv.textContent = `Potential Profit: ${trade.profit.toFixed(2)} SOL`;
+        }
+
+        let tradingInterval;
     </script>
 </body>
 </html>
